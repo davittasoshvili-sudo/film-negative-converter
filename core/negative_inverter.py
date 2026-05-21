@@ -342,25 +342,25 @@ def _apply_tone_controls(img: np.ndarray, params) -> np.ndarray:
            0.0722 * img[:, :, 2])[:, :, np.newaxis]
     out = img.copy()
 
-    # Blacks: quadratic falloff — strongest at pure black, fades smoothly into mids
+    # Blacks: linear falloff in the lower half only (lum < 0.5 → unaffected above)
     if abs(blacks) > 1e-4:
-        w = (1.0 - lum) ** 2
+        w = np.clip((0.5 - lum) * 2.0, 0.0, 1.0)
         out = np.clip(out + blacks * w, 0.0, 1.0)
 
-    # Whites: quadratic falloff — strongest at pure white, fades smoothly into mids
+    # Whites: linear falloff in the upper half only (lum < 0.5 → unaffected below)
     if abs(whites) > 1e-4:
-        w = lum ** 2
+        w = np.clip((lum - 0.5) * 2.0, 0.0, 1.0)
         out = np.clip(out + whites * w, 0.0, 1.0)
 
-    # Shadows: affects lower half of range (0 → 0.5), max shift ±0.4
+    # Shadows: affects lower half of range (0 → 0.5), max shift ±0.25
     if abs(shadows) > 1e-4:
         w = np.clip(1.0 - lum * 2.0, 0.0, 1.0)
-        out = np.clip(out + shadows * 0.4 * w, 0.0, 1.0)
+        out = np.clip(out + shadows * 0.25 * w, 0.0, 1.0)
 
-    # Highlights: affects upper half of range (0.5 → 1.0), max shift ±0.4
+    # Highlights: affects upper half of range (0.5 → 1.0), max shift ±0.25
     if abs(highlights) > 1e-4:
         w = np.clip(lum * 2.0 - 1.0, 0.0, 1.0)
-        out = np.clip(out + highlights * 0.4 * w, 0.0, 1.0)
+        out = np.clip(out + highlights * 0.25 * w, 0.0, 1.0)
 
     return out
 
@@ -528,8 +528,12 @@ def _apply_color_grading(img: np.ndarray, params) -> np.ndarray:
             # Multiplicative: +1 doubles saturation, -1 desaturates fully
             s = np.clip(s * (1.0 + color_sat), 0.0, 1.0)
         if abs(vibrance) > 1e-4:
-            # Boost less-saturated pixels more (protects already vivid colours)
-            s = np.clip(s + vibrance * (1.0 - s) * 0.6, 0.0, 1.0)
+            # Suppress boost for near-white pixels: they have s≈0, so any tiny
+            # R/G/B imbalance would be amplified into a visible tint.
+            # hp = 1.0 for midtones (v≤0.5), falls to 0 at pure white (v=1.0).
+            v  = hsv[:, :, 2]
+            hp = np.clip(2.0 * (1.0 - v), 0.0, 1.0)
+            s  = np.clip(s + vibrance * (1.0 - s) * 0.6 * hp, 0.0, 1.0)
         hsv[:, :, 1] = s
         out = np.clip(_hsv_to_rgb(hsv), 0.0, 1.0)
 
