@@ -1,0 +1,1 @@
+# FilmScan core package

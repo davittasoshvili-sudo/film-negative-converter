@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.spec
+
+# PyInstaller output
+*.exe
+*.app
+
+# User data
+.filmscan/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Large test files
+*.ARW
+*.arw
+*.CR2
+*.cr2
+*.NEF
+*.nef
+*.RAF
+*.raf
+*.DNG
+*.dng
+*.tif
+*.tiff
